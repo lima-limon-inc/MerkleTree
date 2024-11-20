@@ -35,11 +35,17 @@ struct MerkleTree {
     leaves: Vec<Leaf>,
 }
 
-pub fn hello_world() {
+pub fn hash(positions: [Position; 2], leaves: [Leaf; 2]) -> Leaf {
     let mut hasher = Keccak256::new();
-    let data = b"Hello world!";
-    println!("Binary hash: {:?}", data);
-    hasher.update(data);
-    let hash = hasher.finalize();
-    println!("Binary hash: {:?}", hash);
+
+    for leaf in leaves.iter() {
+        hasher.update(leaf.hash);
+    }
+
+    let new_hash = hasher.finalize();
+    Leaf {
+        hash: new_hash.into(),
+        right_child: Some(positions[1]),
+        left_child: Some(positions[0]),
+    }
 }
