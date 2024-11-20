@@ -2,6 +2,7 @@ use sha3::{Digest, Sha3_256};
 
 type Position = usize;
 
+#[derive (Debug)] 
 pub struct Leaf {
     // The hash is an array of 32 u8
     hash: [u8; 32],
@@ -45,23 +46,49 @@ pub fn hash(positions: [Position; 2], leaves: &[&Leaf; 2]) -> Leaf {
 }
 
 
-struct MerkleTree {
+pub struct MerkleTree {
     leaves: Vec<Leaf>,
 }
 
 impl MerkleTree {
     pub fn new<T: std::convert::AsRef<[u8]>>(data: &[T]) -> MerkleTree {
-        let leaves: Vec<_> = data
+        let original_leaves: Vec<(Position, Leaf)> = data
 	  .iter()
 	  .map(|value| {
 	      let hash = Sha3_256::digest(value);
 	      hash
 	  })
 	  .map(|hash| Leaf::new(hash.into(), None, None))
+	  .enumerate()
 	  .collect();
-        MerkleTree {
-	  leaves,
+
+        let new_leaves = Self::add_children_leaves(original_leaves);
+
+        todo!();
+
+        // MerkleTree {
+        // 	  leaves,
+        // }
+    }
+
+    fn add_children_leaves(original_leaves: Vec<(Position, Leaf)>) -> Vec<Leaf> {
+        let mut new_leaves: Vec<_> = Vec::new();
+
+        let mut original_leaves = original_leaves.chunks(2);
+
+        while let Some(leaf) = original_leaves.next() {
+	  println!("{:?}", leaf[0].1);
+	  println!("{:?}", leaf[1].1);
+	  // let (position, leaf) = leaf;
+	  let positions = [leaf[0].0, leaf[1].0];
+
+	  let leaves = [&leaf[0].1, &leaf[1].1];
+
+	  let new_leaf = hash(positions, &leaves);
+	  new_leaves.push(new_leaf);
         }
+
+        new_leaves
     }
 
 }
@@ -73,7 +100,7 @@ mod tests {
     //TODO: This tests isn't really good.
     #[test]
     fn merkel_tree_new() {
-        let merkel = MerkleTree::new(&["90", "98", "89"]);
+        let merkel = MerkleTree::new(&["90", "98", "89", "92"]);
         for leaf in merkel.leaves {
 	  for byte in leaf.hash  { 
 	      println!("{}", byte);
