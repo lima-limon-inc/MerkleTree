@@ -67,3 +67,18 @@ impl MerkleTree {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    //TODO: This tests isn't really good.
+    #[test]
+    fn merkel_tree_new() {
+        let merkel = MerkleTree::new(&["90", "98", "89"]);
+        for leaf in merkel.leaves {
+	  for byte in leaf.hash  { 
+	      println!("{}", byte);
+	  }
+        }
+    }
+}
