@@ -1,4 +1,4 @@
-use sha3::{Keccak256, Digest};
+use sha3::{Digest, Sha3_256};
 
 type Position = usize;
 
@@ -30,13 +30,8 @@ impl Leaf {
 
 }
 
-
-struct MerkleTree {
-    leaves: Vec<Leaf>,
-}
-
 pub fn hash(positions: [Position; 2], leaves: [Leaf; 2]) -> Leaf {
-    let mut hasher = Keccak256::new();
+    let mut hasher = Sha3_256::new();
 
     for leaf in leaves.iter() {
         hasher.update(leaf.hash);
@@ -49,3 +44,26 @@ pub fn hash(positions: [Position; 2], leaves: [Leaf; 2]) -> Leaf {
         left_child: Some(positions[0]),
     }
 }
+
+
+struct MerkleTree {
+    leaves: Vec<Leaf>,
+}
+
+impl MerkleTree {
+    pub fn new<T: std::convert::AsRef<[u8]>>(data: &[T]) -> MerkleTree {
+        let leaves: Vec<_> = data
+	  .iter()
+	  .map(|value| {
+	      let hash = Sha3_256::digest(value);
+	      hash
+	  })
+	  .map(|hash| Leaf::new(hash.into(), None, None))
+	  .collect();
+        MerkleTree {
+	  leaves,
+        }
+    }
+
+}
+
