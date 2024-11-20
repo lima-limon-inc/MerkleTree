@@ -54,8 +54,7 @@ impl MerkleTree {
         let original_leaves: Vec<(Position, Leaf)> = data
             .iter()
             .map(|value| {
-                let hash = Sha3_256::digest(value);
-                hash
+                Sha3_256::digest(value)
             })
             .map(|hash| Leaf::new(hash.into(), None, None))
             .enumerate()
