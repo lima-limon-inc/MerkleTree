@@ -75,19 +75,19 @@ impl MerkleTree {
             // Grab two items at a time
             .chunks(2)
             .into_iter()
-            .map(|a| {
+            .map(|position_and_leaf| {
                 // This is the case where there is an uneven amount
                 // of data elements. The chunks function will returns
                 // the first element by itself. The second element will be none
-                if a.get(1).is_none() {
-                    [&a[0], &a[0]]
+                if position_and_leaf.get(1).is_none() {
+                    [&position_and_leaf[0], &position_and_leaf[0]]
                 } else {
-                    [&a[0], &a[1]]
+                    [&position_and_leaf[0], &position_and_leaf[1]]
                 }
             })
-            .fold(Vec::new(), |mut acc, x| {
-                let positions = [x[0].0, x[1].0];
-                let leaves = [&x[0].1, &x[1].1];
+            .fold(Vec::new(), |mut acc, position_and_leaf| {
+                let positions = [position_and_leaf[0].0, position_and_leaf[1].0];
+                let leaves = [&position_and_leaf[0].1, &position_and_leaf[1].1];
 
                 let new_leaf = hash(positions, &leaves);
                 acc.push(new_leaf);
