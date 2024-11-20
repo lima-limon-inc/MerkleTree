@@ -30,10 +30,11 @@ impl Leaf {
 
 }
 
-pub fn hash(positions: [Position; 2], leaves: [Leaf; 2]) -> Leaf {
+pub fn hash(positions: [Position; 2], leaves: &[&Leaf; 2]) -> Leaf {
     let new_hash = leaves.iter()
         .fold(Sha3_256::new(), |mut acc, a| {
-	  acc.update(a.hash);
+	  let value = a.hash;
+	  acc.update(value);
 	  acc}).finalize();
 
     Leaf {
