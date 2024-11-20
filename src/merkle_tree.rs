@@ -2,7 +2,7 @@ use sha3::{Digest, Sha3_256};
 
 type Position = usize;
 
-struct Leaf {
+pub struct Leaf {
     // The hash is an array of 32 u8
     hash: [u8; 32],
 
