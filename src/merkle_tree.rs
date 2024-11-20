@@ -12,12 +12,6 @@ pub struct Leaf {
     // exist.
     left_child: Option<Position>,
     right_child: Option<Position>,
-
-    // // NOTE: I am NOT a fan of a leaf having it's own index. It seems
-    // // like duplicating information, which can lead to false assumptions.
-    // // I hope it doesnt bite me in the butt later on.
-    // my_position: Position,
-
 }
 
 impl Leaf {
