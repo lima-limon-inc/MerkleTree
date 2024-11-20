@@ -72,21 +72,29 @@ impl MerkleTree {
     }
 
     fn add_children_leaves(original_leaves: Vec<(Position, Leaf)>) -> Vec<Leaf> {
-        let mut new_leaves: Vec<_> = Vec::new();
+        let new_leaves = original_leaves
+	  // Grab two items at a time
+            .chunks(2)
+            .into_iter()
+            .map(|a| {
+	      // This is the case where there is an uneven amount
+	      // of data elements. The chunks function will returns
+	      // the first element by itself. The second element will be none
+	      if a.get(1).is_none() {
+		[&a[0],&a[0]]
+	      } else {
+		[&a[0], &a[1]]
+	      }
+	      
+	  })
+            .fold(Vec::new(), |mut acc, x| {
+	      let positions = [x[0].0, x[1].0];
+	      let leaves = [&x[0].1, &x[1].1];
 
-        let mut original_leaves = original_leaves.chunks(2);
-
-        while let Some(leaf) = original_leaves.next() {
-	  println!("{:?}", leaf[0].1);
-	  println!("{:?}", leaf[1].1);
-	  // let (position, leaf) = leaf;
-	  let positions = [leaf[0].0, leaf[1].0];
-
-	  let leaves = [&leaf[0].1, &leaf[1].1];
-
-	  let new_leaf = hash(positions, &leaves);
-	  new_leaves.push(new_leaf);
-        }
+	      let new_leaf = hash(positions, &leaves);
+	      acc.push(new_leaf);
+	      acc
+	  });
 
         new_leaves
     }

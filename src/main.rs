@@ -1,8 +1,6 @@
 mod merkle_tree;
 
-use crate::merkle_tree::hello_world;
-
 fn main() {
     println!("Hello, world!");
-    hello_world();
+    let merkle_tree = merkle_tree::MerkleTree::new(&["90", "98", "89", "92", "78"]);
 }
