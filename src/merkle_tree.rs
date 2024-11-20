@@ -31,13 +31,11 @@ impl Leaf {
 }
 
 pub fn hash(positions: [Position; 2], leaves: [Leaf; 2]) -> Leaf {
-    let mut hasher = Sha3_256::new();
+    let new_hash = leaves.iter()
+        .fold(Sha3_256::new(), |mut acc, a| {
+	  acc.update(a.hash);
+	  acc}).finalize();
 
-    for leaf in leaves.iter() {
-        hasher.update(leaf.hash);
-    }
-
-    let new_hash = hasher.finalize();
     Leaf {
         hash: new_hash.into(),
         right_child: Some(positions[1]),
