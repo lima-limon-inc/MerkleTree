@@ -54,18 +54,6 @@ impl MerkleTree {
 	  }
         }
 
-        println!("HERE");
-        println!("{:?}", tree);
-        for level in tree.clone() {
-	  // for node in level {
-	  //     print!("{:?}", node);
-	  // }
-	  println!("{}", level.len())
-        }
-        // for leaf in tree.clone().iter().flatten().collect() {
-        // 	  println!("{:?}", leaf);
-        // }
-
 
         MerkleTree { leaves: tree }
 
