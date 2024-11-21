@@ -6,8 +6,7 @@ type HashedData = [u8; 32];
 pub fn hash(leaves: &[HashedData]) -> HashedData {
     let new_hash = leaves
         .iter()
-        .fold(Sha3_256::new(), |mut acc, a| {
-            let value = a;
+        .fold(Sha3_256::new(), |mut acc, value| {
             acc.update(value);
             acc
         })
