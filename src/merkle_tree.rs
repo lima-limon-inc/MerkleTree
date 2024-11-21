@@ -1,126 +1,120 @@
 use sha3::{Digest, Sha3_256};
 
-type Position = usize;
+type HashedData = [u8; 32];
 
-#[derive(Debug, Copy, Clone)]
-pub struct Leaf {
-    // The hash is an array of 32 u8
-    hash: [u8; 32],
-
-    // Each leaf will have an index to its children.
-    // It's an option type because maybe the child does not
-    // exist.
-    left_child: Option<Position>,
-    right_child: Option<Position>,
-}
-
-impl Leaf {
-    pub fn new(
-        hash: [u8; 32],
-        left_child: Option<Position>,
-        right_child: Option<Position>,
-    ) -> Leaf {
-        Leaf {
-            hash,
-            left_child,
-            right_child,
-        }
-    }
-}
-
-pub fn hash(positions: [Position; 2], leaves: &[&Leaf; 2]) -> Leaf {
+pub fn hash(leaves: &[HashedData]) -> HashedData {
     let new_hash = leaves
         .iter()
-        .fold(Sha3_256::new(), |mut acc, a| {
-            let value = a.hash;
+        .fold(Sha3_256::new(), |mut acc, value| {
             acc.update(value);
             acc
         })
-        .finalize();
+        .finalize().into();
 
-    Leaf {
-        hash: new_hash.into(),
-        right_child: Some(positions[1]),
-        left_child: Some(positions[0]),
-    }
+    new_hash
 }
 
 pub struct MerkleTree {
-    leaves: Vec<Leaf>,
+    leaves: Vec<Vec<HashedData>>,
 }
 
 impl MerkleTree {
     pub fn new<T: std::convert::AsRef<[u8]>>(data: &[T]) -> MerkleTree {
-
-
-        // The first time the "latest leaves" are created from the
-        // node passed as parameters.
-        let mut latest_leaves: Vec<(Position, Leaf)> = data
+        let initial_blocks: Vec<HashedData> = data
             .iter()
             .map(|value| {
-                Sha3_256::digest(value)
+                Sha3_256::digest(value).into()
             })
-            .map(|hash| Leaf::new(hash.into(), None, None))
-            .enumerate()
             .collect();
 
-        // We will extend the trees with the latest leaves every time.
-        let mut tree: Vec<(Position, Leaf)> = vec![];
+        let mut tree: Vec<Vec<HashedData>> = vec![];
 
-        // I hate this so much
+        let mut new_leaves = initial_blocks;
+        tree.push(new_leaves.clone());
         loop {
-	  tree.extend(latest_leaves.clone());
-	  latest_leaves = Self::add_children_leaves(latest_leaves, tree.len());
-	  if latest_leaves.len() == 1 {
-	      tree.extend(latest_leaves.clone());
+
+	  new_leaves = new_leaves
+	      .chunks(2)
+	      .map(|left_n_right|
+		 {
+		     if left_n_right.get(1).is_none() {
+		        // This is the case where we have an uneven
+		        // amount of nodes
+		         hash(&[left_n_right[0], left_n_right[0]])
+		     } else {
+		         hash(&[left_n_right[0], left_n_right[1]])
+		     }
+		 }
+	      )
+	      .collect();
+	  tree.push(new_leaves.clone());
+	  if new_leaves.len() == 1 {
 	      break;
 	  }
         }
 
-        println!("");
-        for leaf in tree.clone() {
-	  println!("{:?}", leaf);
-        }
-
-        let leaves: Vec<Leaf> = tree
-	  .into_iter()
-	  .map(|a| a.1)
-	  .collect();
-
-
-        MerkleTree { leaves }
+        MerkleTree { leaves: tree }
 
     }
 
-    fn add_children_leaves(original_leaves: Vec<(Position, Leaf)>, length: usize ) -> Vec<(Position, Leaf)> {
-        let mut amount = length;
+    pub fn generate_proof<T: std::convert::AsRef<[u8]>>(&self, elem: &T) -> Option<Vec<HashedData>> {
 
-        let new_leaves = original_leaves
-            // Grab two items at a time
-            .chunks(2)
-            .into_iter()
-            .map(|position_and_leaf| {
-                // This is the case where there is an uneven amount
-                // of data elements. The chunks function will returns
-                // the first element by itself. The second element will be none
-                if position_and_leaf.get(1).is_none() {
-                    [&position_and_leaf[0], &position_and_leaf[0]]
-                } else {
-                    [&position_and_leaf[0], &position_and_leaf[1]]
-                }
-            })
-            .fold(Vec::new(), |mut acc, position_and_leaf| {
-                let positions = [position_and_leaf[0].0, position_and_leaf[1].0];
-                let leaves = [&position_and_leaf[0].1, &position_and_leaf[1].1];
+        // It there is no first level, for whatever reason, reaturn None
+        let first_level = self.leaves.get(0)?;
 
-                let new_leaf = hash(positions, &leaves);
-	      let new_position = amount;
-	      amount += 1;
-                acc.push((new_position, new_leaf));
-                acc
-            });
+        // If the requested item is not present in the data block, we
+        // also return None
+        let mut index = first_level
+	  .iter()
+	  .position(|og_data| {
+	      let check: HashedData = Sha3_256::digest(elem).into();
+	      *og_data == check
+	  })?;
 
-        new_leaves
+        // We need the brother of the requested item.
+        let brother = if index % 2 == 0 { index + 1 } else { index - 1 };
+        let mut needed_values: Vec<_> = vec![index, brother];
+
+        // The first two values *MUST* be sorted, since the hashing
+        // function varies output depending on order.
+        needed_values.sort();
+
+        // NOTE: This section is very imperative, I'd like to simplify
+        // it later, for now it works. But I am not a fan at all.
+        // This is just a WIP
+        for _ in self.leaves.iter().skip(1) {
+	  let parent_index = (index as f32 / 2.0).floor() as usize;
+	  let uncle_index = if parent_index % 2 == 0 { parent_index + 1 } else { parent_index - 1 };
+
+	  index = parent_index;
+	  needed_values.push(uncle_index);
+        }
+
+        // The last element contains the needed value for the root,
+        // which we don't need. Thus, we remove it
+        needed_values.remove(needed_values.len() - 1);
+        println!("{:?}", needed_values);
+
+        // NOTE: There is no reason for me to go through the vector
+        // twice. I could store all the values in one go. I am doing
+        // this to simply debugging. 
+        let first_value = self.leaves[0][needed_values[0]];
+        let mut hashes: Vec<HashedData> = vec![first_value];
+
+        let mut required_index = needed_values.iter().skip(1);
+
+        for level in &self.leaves {
+	  if level.len() == 1 {
+	      break;
+	  }
+	  if let Some(index) = required_index.next() {
+	      let value = level[*index];
+	      hashes.push(value);
+	  } else {
+	      panic!("INVARIANT HAS BEEN BROKEN. THIS SHOULD NOT HAPPEN")
+	  }
+        }
+        Some(hashes)
     }
 }
 
@@ -157,7 +151,7 @@ mod tests {
 //          0         1 2        3 4         5
 
         let merkle_tree = MerkleTree::new(&["0", "1", "2", "3", "4", "5"]);
-        assert_eq!(merkle_tree.leaves.len(), 11 + 1)
+        assert_eq!(merkle_tree.leaves.len(), 4)
     }
 
     #[test]
@@ -178,6 +172,25 @@ mod tests {
 //          0         1 2        3
 
         let merkle_tree = MerkleTree::new(&["0", "1", "2", "3"]);
-        assert_eq!(merkle_tree.leaves.len(), 6 + 1)
+        assert_eq!(merkle_tree.leaves.len(), 3)
     }
+
+    #[test]
+    fn generate_proof_test() {
+
+        let merkle_tree = MerkleTree::new(&[
+	  "0",
+	  "1",
+	  "2",
+	  "3",
+	  "4", 
+	  "5", 
+	  "6", 
+	  "7", 
+        ]);
+
+        merkle_tree.generate_proof(&"5");
+        assert!(false)
+    }
+
 }
