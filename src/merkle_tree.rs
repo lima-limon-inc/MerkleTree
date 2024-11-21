@@ -61,6 +61,11 @@ impl MerkleTree {
             .collect();
 
         let new_leaves = Self::add_children_leaves(original_leaves);
+        println!("NEW");
+        println!("{}", new_leaves.len());
+        for leaf in new_leaves {
+            println!("{:?}", leaf);
+        }
 
         todo!();
 
