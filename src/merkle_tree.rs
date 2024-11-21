@@ -2,7 +2,7 @@ use sha3::{Digest, Sha3_256};
 
 type Position = usize;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Leaf {
     // The hash is an array of 32 u8
     hash: [u8; 32],
@@ -51,7 +51,11 @@ pub struct MerkleTree {
 
 impl MerkleTree {
     pub fn new<T: std::convert::AsRef<[u8]>>(data: &[T]) -> MerkleTree {
-        let original_leaves: Vec<(Position, Leaf)> = data
+
+
+        // The first time the "latest leaves" are created from the
+        // node passed as parameters.
+        let mut latest_leaves: Vec<(Position, Leaf)> = data
             .iter()
             .map(|value| {
                 Sha3_256::digest(value)
@@ -60,21 +64,37 @@ impl MerkleTree {
             .enumerate()
             .collect();
 
-        let new_leaves = Self::add_children_leaves(original_leaves);
-        println!("NEW");
-        println!("{}", new_leaves.len());
-        for leaf in new_leaves {
-            println!("{:?}", leaf);
+        // We will extend the trees with the latest leaves every time.
+        let mut tree: Vec<(Position, Leaf)> = vec![];
+
+        // I hate this so much
+        loop {
+	  tree.extend(latest_leaves.clone());
+	  latest_leaves = Self::add_children_leaves(latest_leaves, tree.len());
+	  if latest_leaves.len() == 1 {
+	      tree.extend(latest_leaves.clone());
+	      break;
+	  }
         }
 
-        todo!();
+        println!("");
+        for leaf in tree.clone() {
+	  println!("{:?}", leaf);
+        }
 
-        // MerkleTree {
-        // 	  leaves,
-        // }
+        let leaves: Vec<Leaf> = tree
+	  .into_iter()
+	  .map(|a| a.1)
+	  .collect();
+
+
+        MerkleTree { leaves }
+
     }
 
-    fn add_children_leaves(original_leaves: Vec<(Position, Leaf)>) -> Vec<Leaf> {
+    fn add_children_leaves(original_leaves: Vec<(Position, Leaf)>, length: usize ) -> Vec<(Position, Leaf)> {
+        let mut amount = length;
+
         let new_leaves = original_leaves
             // Grab two items at a time
             .chunks(2)
@@ -94,7 +114,9 @@ impl MerkleTree {
                 let leaves = [&position_and_leaf[0].1, &position_and_leaf[1].1];
 
                 let new_leaf = hash(positions, &leaves);
-                acc.push(new_leaf);
+	      let new_position = amount;
+	      amount += 1;
+                acc.push((new_position, new_leaf));
                 acc
             });
 
