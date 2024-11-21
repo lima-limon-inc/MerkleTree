@@ -59,52 +59,20 @@ impl MerkleTree {
 
         println!("HERE");
         println!("{:?}", tree);
-        for level in tree {
+        for level in tree.clone() {
 	  // for node in level {
 	  //     print!("{:?}", node);
 	  // }
 	  println!("{}", level.len())
         }
-        todo!();
         // for leaf in tree.clone().iter().flatten().collect() {
         // 	  println!("{:?}", leaf);
         // }
 
 
-        // MerkleTree { leaves }
+        MerkleTree { leaves: tree }
 
     }
-
-    // fn add_children_leaves(original_leaves: Vec<(Position, Leaf)>, length: usize ) -> Vec<(Position, Leaf)> {
-    //     let mut amount = length;
-
-    //     let new_leaves = original_leaves
-    //         // Grab two items at a time
-    //         .chunks(2)
-    //         .into_iter()
-    //         .map(|position_and_leaf| {
-    //             // This is the case where there is an uneven amount
-    //             // of data elements. The chunks function will returns
-    //             // the first element by itself. The second element will be none
-    //             if position_and_leaf.get(1).is_none() {
-    //                 [&position_and_leaf[0], &position_and_leaf[0]]
-    //             } else {
-    //                 [&position_and_leaf[0], &position_and_leaf[1]]
-    //             }
-    //         })
-    //         .fold(Vec::new(), |mut acc, position_and_leaf| {
-    //             let positions = [position_and_leaf[0].0, position_and_leaf[1].0];
-    //             let leaves = [&position_and_leaf[0].1, &position_and_leaf[1].1];
-
-    //             let new_leaf = hash(positions, &leaves);
-    // 	      let new_position = amount;
-    // 	      amount += 1;
-    //             acc.push((new_position, new_leaf));
-    //             acc
-    //         });
-
-    //     new_leaves
-    // }
 }
 
 #[cfg(test)]
@@ -140,7 +108,7 @@ mod tests {
 //          0         1 2        3 4         5
 
         let merkle_tree = MerkleTree::new(&["0", "1", "2", "3", "4", "5"]);
-        assert_eq!(merkle_tree.leaves.len(), 11 + 1)
+        assert_eq!(merkle_tree.leaves.len(), 4)
     }
 
     #[test]
@@ -161,6 +129,6 @@ mod tests {
 //          0         1 2        3
 
         let merkle_tree = MerkleTree::new(&["0", "1", "2", "3"]);
-        assert_eq!(merkle_tree.leaves.len(), 6 + 1)
+        assert_eq!(merkle_tree.leaves.len(), 3)
     }
 }
