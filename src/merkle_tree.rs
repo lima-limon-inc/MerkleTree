@@ -42,9 +42,7 @@ impl MerkleTree {
 		     if left_n_right.get(1).is_none() {
 		        // This is the case where we have an uneven
 		        // amount of nodes
-		         hash(&[left_n_right[0]])
-                             // [&left_n_right[0], &left_n_right[0]]
-
+		         hash(&[left_n_right[0], left_n_right[0]])
 		     } else {
 		         hash(&[left_n_right[0], left_n_right[1]])
 		     }
