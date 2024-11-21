@@ -128,14 +128,56 @@ impl MerkleTree {
 mod tests {
     use super::*;
 
-    //TODO: This tests isn't really good.
     #[test]
-    fn merkel_tree_new() {
-        let merkel = MerkleTree::new(&["90", "98", "89", "92"]);
-        for leaf in merkel.leaves {
-            for byte in leaf.hash {
-                println!("{}", byte);
-            }
-        }
+    fn merkel_tree_not_power_2() {
+
+//        		   11
+//        		   /\
+//        		  /  \
+//        		 /    \
+//        	          /      \
+//        	         /        \
+//        	        /          \
+//        	       /	          \
+//        	      /	           \
+//        	     /	            \
+//        	    /	             \
+//                    9                     10
+//        	  /\	              /\
+//                   /  \	             /  \
+//                  /    \	            /    \
+//                 /      \	           /      \
+//                /	       \	          /        \
+//                6        7            8        8
+//               /\	        /\          /\     
+//              /  \       /  \        /  \    
+//             /    \     /	 \      /    \   
+//            /	 \   /	  \    /      \  
+//           /	  \ /	   \  /        \ 
+//          0         1 2        3 4         5
+
+        let merkle_tree = MerkleTree::new(&["0", "1", "2", "3", "4", "5"]);
+        assert_eq!(merkle_tree.leaves.len(), 11 + 1)
+    }
+
+    #[test]
+    fn merkel_tree_power_2() {
+
+//                    6           
+//        	  /\	    
+//                   /  \	    
+//                  /    \	    
+//                 /      \	    
+//                /	       \	    
+//                4         5     
+//               /\	        /\    
+//              /  \       /  \   
+//             /    \     /	 \  
+//            /	 \   /	  \ 
+//           /	  \ /	   \
+//          0         1 2        3
+
+        let merkle_tree = MerkleTree::new(&["0", "1", "2", "3"]);
+        assert_eq!(merkle_tree.leaves.len(), 6 + 1)
     }
 }
