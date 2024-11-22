@@ -59,7 +59,6 @@ impl MerkleTree {
     // This function returns the index of the hash mainly to make
     // debugging easier. Plus, I thinks it's a cool bonus. It can
     // always be ignored with (_, hash)
-    #[cfg(test)]
     pub fn generate_proof<T: AsRef<[u8]>>(&self, elem: &T) -> Option<Vec<(usize, HashedData)>> {
         // It there is no first level, for whatever reason, reaturn None
         let first_level = self.leaves.get(0)?;
@@ -94,7 +93,6 @@ impl MerkleTree {
         Some(proof_hashes)
     }
 
-    #[cfg(test)]
     pub fn verify<T: AsRef<[u8]>>(&self, proof: Vec<HashedData>, check: &T) -> bool {
         let check: HashedData = Sha3_256::digest(check).into();
 
@@ -128,7 +126,6 @@ impl MerkleTree {
         new_root == self.leaves[self.leaves.len() - 1][0]
     }
 
-    #[cfg(test)]
     pub fn add_element<T: AsRef<[u8]>>(&mut self, new_val: &T) {
         let mut initial_blocks: Vec<HashedData> = self.leaves[0].clone();
         let new_value = Sha3_256::digest(new_val).into();
