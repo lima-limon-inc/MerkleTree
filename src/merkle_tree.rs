@@ -1,6 +1,7 @@
 use sha3::{Digest, Sha3_256};
 
 type HashedData = [u8; 32];
+type Position = usize;
 
 pub fn hash(leaves: &[HashedData]) -> HashedData {
     let new_hash = leaves
@@ -57,8 +58,10 @@ impl MerkleTree {
 
     }
 
-    pub fn generate_proof<T: std::convert::AsRef<[u8]>>(&self, elem: &T) -> Option<Vec<HashedData>> {
-
+    // This function returns the index of the hash mainly to make
+    // debugging easier. Plus, I thinks it's a cool bonus. It can
+    // always be ignored with (_, hash)
+    pub fn generate_proof<T: std::convert::AsRef<[u8]>>(&self, elem: &T) -> Option<Vec<(Position, HashedData)>> {
         // It there is no first level, for whatever reason, reaturn None
         let first_level = self.leaves.get(0)?;
 
@@ -71,49 +74,37 @@ impl MerkleTree {
 	      *og_data == check
 	  })?;
 
-        // We need the brother of the requested item.
-        let brother = if index % 2 == 0 { index + 1 } else { index - 1 };
-        let mut needed_values: Vec<_> = vec![index, brother];
+        let first_hash = self.leaves[0][index];
+        let mut hashes: Vec<(Position, HashedData)> = vec![(index, first_hash)];
 
-        // The first two values *MUST* be sorted, since the hashing
-        // function varies output depending on order.
-        needed_values.sort();
-
-        // NOTE: This section is very imperative, I'd like to simplify
-        // it later, for now it works. But I am not a fan at all.
-        // This is just a WIP
-        for _ in self.leaves.iter().skip(1) {
-	  let parent_index = (index as f32 / 2.0).floor() as usize;
-	  let uncle_index = if parent_index % 2 == 0 { parent_index + 1 } else { parent_index - 1 };
-
-	  index = parent_index;
-	  needed_values.push(uncle_index);
-        }
-
-        // The last element contains the needed value for the root,
-        // which we don't need. Thus, we remove it
-        needed_values.remove(needed_values.len() - 1);
-        println!("{:?}", needed_values);
-
-        // NOTE: There is no reason for me to go through the vector
-        // twice. I could store all the values in one go. I am doing
-        // this to simply debugging. 
-        let first_value = self.leaves[0][needed_values[0]];
-        let mut hashes: Vec<HashedData> = vec![first_value];
-
-        let mut required_index = needed_values.iter().skip(1);
-
-        for level in &self.leaves {
-	  if level.len() == 1 {
+        for layer in self.leaves.iter() {
+	  // Skip root 
+	  if layer.len() == 1 {
 	      break;
 	  }
-	  if let Some(index) = required_index.next() {
-	      let value = level[*index];
-	      hashes.push(value);
+	  if index % 2 == 0 {
+	      // Index is even. We have to check if it has a sibling.
+	      // Example case merkle tree from 0 to 6
+	      if let Some(right_s) = layer.get(index + 1) {
+		hashes.push((index + 1, *right_s));
+	      } else {
+		// If the node doesn't have a sibling, that nodes
+		// will be its own sibling.
+		hashes.push((index, layer[index]));
+	      }
 	  } else {
-	      panic!("INVARIANT HAS BEEN BROKEN. THIS SHOULD NOT HAPPEN")
+	      // Odd numbers always have a sibling to the right.
+	      hashes.push((index - 1, layer[index - 1]));
 	  }
+
+	  index /= 2;
         }
+
+        if hashes.len() >= 2 {
+	  let first_two = &mut hashes[0..=1];
+	  first_two.sort();
+        }
+
         Some(hashes)
     }
 }
@@ -185,11 +176,14 @@ mod tests {
 	  "3",
 	  "4", 
 	  "5", 
-	  "6", 
-	  "7", 
+	  // "6", 
+	  // "7", 
         ]);
 
-        merkle_tree.generate_proof(&"5");
+        let proof = merkle_tree.generate_proof(&"5");
+        for value in proof.unwrap() {
+	  println!("{:?}", value.0);
+        }
         assert!(false)
     }
 
