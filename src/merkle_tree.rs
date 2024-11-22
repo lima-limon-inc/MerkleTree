@@ -73,32 +73,27 @@ impl MerkleTree {
             *og_data == check
         })?;
 
-        let mut hashes: Vec<(usize, HashedData)> = vec![];
-
-        for layer in self.leaves.iter() {
-            // Skip root
-            if layer.len() == 1 {
-                break;
-            }
-            if index % 2 == 0 {
-                // Index is even. We have to check if it has a sibling.
-                // Example case merkle tree from 0 to 6
-                if let Some(right_s) = layer.get(index + 1) {
-                    hashes.push((index + 1, *right_s));
+        // Remove the root layer.
+        let proof_hashes = self.leaves.iter().filter(|layer| layer.len() > 1).fold(
+            Vec::new(),
+            |mut hashes, layer| {
+                if index % 2 == 0 {
+                    if let Some(right_s) = layer.get(index + 1) {
+                        hashes.push((index + 1, *right_s));
+                    } else {
+                        // If the node doesn't have a sibling, that nodes
+                        // will be its own sibling.
+                        hashes.push((index, layer[index]));
+                    }
                 } else {
-                    // If the node doesn't have a sibling, that nodes
-                    // will be its own sibling.
-                    hashes.push((index, layer[index]));
+                    hashes.push((index - 1, layer[index - 1]));
                 }
-            } else {
-                // Odd numbers always have a sibling to the right.
-                hashes.push((index - 1, layer[index - 1]));
-            }
 
-            index /= 2;
-        }
-
-        Some(hashes)
+                index /= 2;
+                hashes
+            },
+        );
+        Some(proof_hashes)
     }
 
     pub fn verify<T: std::convert::AsRef<[u8]>>(&self, proof: Vec<HashedData>, check: &T) -> bool {
