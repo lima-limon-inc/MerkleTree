@@ -34,8 +34,8 @@ Once created, one of the main things you can do is generate a proof for a given 
 ``` rust
 fn main() {
         let mut merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
-		
-		let proof = merkle_tree.generate_proof(&"1");
+        
+        let proof = merkle_tree.generate_proof(&"1");
 }
 ```
 
@@ -44,8 +44,8 @@ This proof will also contain the indexes at each level of the generated proof. T
 ``` rust
 fn main() {
         let mut merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
-		
-		let proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
+        
+        let proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
 }
 ```
 
@@ -54,11 +54,11 @@ Now you have the proof. This proof allows us to check wether a certain value is 
 ``` rust
 fn main() {
         let mut merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
-		
-		let proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
-		
+        
+        let proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
+        
         let exists = merkle_tree.verify(proof, &"1");
-		println!("{}", exists);
+        println!("{}", exists);
 }
 ```
 
@@ -70,15 +70,15 @@ Furthermore, you can extend the tree to your heart's content. This will modify t
 ``` rust
 fn main() {
         let mut merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
-		
-		let proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
-		
-		merkle_tree.add_element(&"6");
-		// After this addition, the proof becomes invalid. But new ones can be generated
+        
+        let proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
+        
+        merkle_tree.add_element(&"6");
+        // After this addition, the proof becomes invalid. But new ones can be generated
 
-		let new_proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
-		
+        let new_proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
+        
         let exists = merkle_tree.verify(new_proof, &"1");
-		println!("{}", exists);
+        println!("{}", exists);
 }
 ```
