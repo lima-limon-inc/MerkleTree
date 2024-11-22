@@ -167,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn generate_proof_test() {
+    fn generate_proof_not_power_test() {
 
         let merkle_tree = MerkleTree::new(&[
 	  "0",
@@ -180,11 +180,40 @@ mod tests {
 	  // "7", 
         ]);
 
-        let proof = merkle_tree.generate_proof(&"5");
-        for value in proof.unwrap() {
-	  println!("{:?}", value.0);
-        }
-        assert!(false)
+        let proof: Vec<Position> = merkle_tree
+	  .generate_proof(&"5")
+	  .unwrap()
+	  .iter()
+	  .map(|a| a.0)
+	  .collect()
+	  ;
+
+        assert_eq!(proof, [4, 5, 2, 0]);
+    }
+
+    #[test]
+    fn generate_proof_power_test() {
+
+        let merkle_tree = MerkleTree::new(&[
+	  "0",
+	  "1",
+	  "2",
+	  "3",
+	  "4", 
+	  "5", 
+	  "6", 
+	  "7", 
+        ]);
+
+        let proof: Vec<Position> = merkle_tree
+	  .generate_proof(&"5")
+	  .unwrap()
+	  .iter()
+	  .map(|a| a.0)
+	  .collect()
+	  ;
+
+        assert_eq!(proof, [4, 5, 3, 0]);
     }
 
 }
