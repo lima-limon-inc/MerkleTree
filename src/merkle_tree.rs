@@ -20,15 +20,9 @@ pub struct MerkleTree {
 }
 
 impl MerkleTree {
-    pub fn new<T: std::convert::AsRef<[u8]>>(data: &[T]) -> MerkleTree {
-        let initial_blocks: Vec<HashedData> = data
-            .iter()
-            .map(|value| Sha3_256::digest(value).into())
-            .collect();
-
+    fn generate_tree(initial_hashes: Vec<HashedData>) -> Vec<Vec<HashedData>> {
         let mut tree: Vec<Vec<HashedData>> = vec![];
-
-        let mut new_leaves = initial_blocks;
+        let mut new_leaves = initial_hashes;
         tree.push(new_leaves.clone());
         loop {
             new_leaves = new_leaves
@@ -48,6 +42,16 @@ impl MerkleTree {
                 break;
             }
         }
+
+        tree
+    }
+    pub fn new<T: std::convert::AsRef<[u8]>>(data: &[T]) -> MerkleTree {
+        let initial_blocks: Vec<HashedData> = data
+            .iter()
+            .map(|value| Sha3_256::digest(value).into())
+            .collect();
+
+        let tree = Self::generate_tree(initial_blocks);
 
         MerkleTree { leaves: tree }
     }
@@ -127,6 +131,14 @@ impl MerkleTree {
         println!("New root {:?}", new_root);
         new_root == self.leaves[self.leaves.len() - 1][0]
     }
+
+    pub fn add_element<T: std::convert::AsRef<[u8]>>(&mut self, new_val: &T) {
+        let mut initial_blocks: Vec<HashedData> = self.leaves[0].clone();
+        let new_value = Sha3_256::digest(new_val).into();
+        initial_blocks.push(new_value);
+        let new_tree = Self::generate_tree(initial_blocks);
+        self.leaves = new_tree;
+    }
 }
 
 #[cfg(test)]
@@ -186,6 +198,30 @@ mod tests {
 
         let is_valid = merkle_tree.verify(proof, &"5");
         println!("{}", is_valid);
+        assert!(is_valid);
+    }
+
+    #[test]
+    fn generate_new_tree() {
+        let mut merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
+        merkle_tree.add_element(&"6");
+
+        let proof_pos: Vec<usize> = merkle_tree
+            .generate_proof(&"6")
+            .unwrap()
+            .iter()
+            .map(|(position, _)| *position)
+            .collect();
+
+        let proof_values: Vec<HashedData> = merkle_tree
+            .generate_proof(&"6")
+            .unwrap()
+            .iter()
+            .map(|(_, values)| *values)
+            .collect();
+
+        assert_eq!(proof_pos, [4, 2, 0]);
+        let is_valid = merkle_tree.verify(proof_values, &"6");
         assert!(is_valid);
     }
 }
