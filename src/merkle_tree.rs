@@ -45,7 +45,7 @@ impl MerkleTree {
 
         tree
     }
-    pub fn new<T: std::convert::AsRef<[u8]>>(data: &[T]) -> MerkleTree {
+    pub fn new<T: AsRef<[u8]>>(data: &[T]) -> MerkleTree {
         let initial_blocks: Vec<HashedData> = data
             .iter()
             .map(|value| Sha3_256::digest(value).into())
@@ -60,10 +60,7 @@ impl MerkleTree {
     // debugging easier. Plus, I thinks it's a cool bonus. It can
     // always be ignored with (_, hash)
     #[cfg(test)]
-    pub fn generate_proof<T: std::convert::AsRef<[u8]>>(
-        &self,
-        elem: &T,
-    ) -> Option<Vec<(usize, HashedData)>> {
+    pub fn generate_proof<T: AsRef<[u8]>>(&self, elem: &T) -> Option<Vec<(usize, HashedData)>> {
         // It there is no first level, for whatever reason, reaturn None
         let first_level = self.leaves.get(0)?;
 
@@ -98,7 +95,7 @@ impl MerkleTree {
     }
 
     #[cfg(test)]
-    pub fn verify<T: std::convert::AsRef<[u8]>>(&self, proof: Vec<HashedData>, check: &T) -> bool {
+    pub fn verify<T: AsRef<[u8]>>(&self, proof: Vec<HashedData>, check: &T) -> bool {
         let check: HashedData = Sha3_256::digest(check).into();
 
         if let Some(mut element_index) = self
@@ -132,7 +129,7 @@ impl MerkleTree {
     }
 
     #[cfg(test)]
-    pub fn add_element<T: std::convert::AsRef<[u8]>>(&mut self, new_val: &T) {
+    pub fn add_element<T: AsRef<[u8]>>(&mut self, new_val: &T) {
         let mut initial_blocks: Vec<HashedData> = self.leaves[0].clone();
         let new_value = Sha3_256::digest(new_val).into();
         initial_blocks.push(new_value);
