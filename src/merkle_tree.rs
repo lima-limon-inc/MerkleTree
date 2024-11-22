@@ -114,18 +114,15 @@ impl MerkleTree {
             .position(|og_data| *og_data == check)
             .unwrap();
 
-        // println!("{}", element_index);
-
-        for part in proof {
-            println!("{}", element_index);
+        let new_root = proof.iter().fold(check, |mut accumulated_hash, proof| {
             if element_index % 2 == 0 {
-                new_root = hash(&[new_root, part]);
+                accumulated_hash = hash(&[accumulated_hash, *proof]);
             } else {
-                new_root = hash(&[part, new_root]);
+                accumulated_hash = hash(&[*proof, accumulated_hash]);
             }
-
             element_index /= 2;
-        }
+            accumulated_hash
+        });
 
         println!("Root {:?}", self.leaves[self.leaves.len() - 1][0]);
         println!("New root {:?}", new_root);
