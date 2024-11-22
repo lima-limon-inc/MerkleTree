@@ -1,7 +1,6 @@
 use sha3::{Digest, Sha3_256};
 
 type HashedData = [u8; 32];
-type Position = usize;
 
 pub fn hash(leaves: &[HashedData]) -> HashedData {
     let new_hash = leaves
@@ -59,7 +58,7 @@ impl MerkleTree {
     pub fn generate_proof<T: std::convert::AsRef<[u8]>>(
         &self,
         elem: &T,
-    ) -> Option<Vec<(Position, HashedData)>> {
+    ) -> Option<Vec<(usize, HashedData)>> {
         // It there is no first level, for whatever reason, reaturn None
         let first_level = self.leaves.get(0)?;
 
@@ -70,7 +69,7 @@ impl MerkleTree {
             *og_data == check
         })?;
 
-        let mut hashes: Vec<(Position, HashedData)> = vec![];
+        let mut hashes: Vec<(usize, HashedData)> = vec![];
 
         for layer in self.leaves.iter() {
             // Skip root
@@ -150,7 +149,7 @@ mod tests {
     fn generate_proof_not_power_test() {
         let merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
 
-        let proof: Vec<Position> = merkle_tree
+        let proof: Vec<usize> = merkle_tree
             .generate_proof(&"5")
             .unwrap()
             .iter()
@@ -164,7 +163,7 @@ mod tests {
     fn generate_proof_power_test() {
         let merkle_tree = MerkleTree::new(&["0", "1", "2", "3", "4", "5", "6", "7"]);
 
-        let proof: Vec<Position> = merkle_tree
+        let proof: Vec<usize> = merkle_tree
             .generate_proof(&"5")
             .unwrap()
             .iter()
