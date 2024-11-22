@@ -20,15 +20,9 @@ pub struct MerkleTree {
 }
 
 impl MerkleTree {
-    pub fn new<T: std::convert::AsRef<[u8]>>(data: &[T]) -> MerkleTree {
-        let initial_blocks: Vec<HashedData> = data
-            .iter()
-            .map(|value| Sha3_256::digest(value).into())
-            .collect();
-
+    fn generate_tree(initial_hashes: Vec<HashedData>) -> Vec<Vec<HashedData>> {
         let mut tree: Vec<Vec<HashedData>> = vec![];
-
-        let mut new_leaves = initial_blocks;
+        let mut new_leaves = initial_hashes;
         tree.push(new_leaves.clone());
         loop {
             new_leaves = new_leaves
@@ -49,16 +43,23 @@ impl MerkleTree {
             }
         }
 
+        tree
+    }
+    pub fn new<T: AsRef<[u8]>>(data: &[T]) -> MerkleTree {
+        let initial_blocks: Vec<HashedData> = data
+            .iter()
+            .map(|value| Sha3_256::digest(value).into())
+            .collect();
+
+        let tree = Self::generate_tree(initial_blocks);
+
         MerkleTree { leaves: tree }
     }
 
     // This function returns the index of the hash mainly to make
     // debugging easier. Plus, I thinks it's a cool bonus. It can
     // always be ignored with (_, hash)
-    pub fn generate_proof<T: std::convert::AsRef<[u8]>>(
-        &self,
-        elem: &T,
-    ) -> Option<Vec<(usize, HashedData)>> {
+    pub fn generate_proof<T: AsRef<[u8]>>(&self, elem: &T) -> Option<Vec<(usize, HashedData)>> {
         // It there is no first level, for whatever reason, reaturn None
         let first_level = self.leaves.get(0)?;
 
@@ -69,63 +70,67 @@ impl MerkleTree {
             *og_data == check
         })?;
 
-        let mut hashes: Vec<(usize, HashedData)> = vec![];
-
-        for layer in self.leaves.iter() {
-            // Skip root
-            if layer.len() == 1 {
-                break;
-            }
-            if index % 2 == 0 {
-                // Index is even. We have to check if it has a sibling.
-                // Example case merkle tree from 0 to 6
-                if let Some(right_s) = layer.get(index + 1) {
-                    hashes.push((index + 1, *right_s));
+        // Remove the root layer.
+        let proof_hashes = self.leaves.iter().filter(|layer| layer.len() > 1).fold(
+            Vec::new(),
+            |mut hashes, layer| {
+                if index % 2 == 0 {
+                    if let Some(right_s) = layer.get(index + 1) {
+                        hashes.push((index + 1, *right_s));
+                    } else {
+                        // If the node doesn't have a sibling, that nodes
+                        // will be its own sibling.
+                        hashes.push((index, layer[index]));
+                    }
                 } else {
-                    // If the node doesn't have a sibling, that nodes
-                    // will be its own sibling.
-                    hashes.push((index, layer[index]));
+                    hashes.push((index - 1, layer[index - 1]));
                 }
-            } else {
-                // Odd numbers always have a sibling to the right.
-                hashes.push((index - 1, layer[index - 1]));
-            }
 
-            index /= 2;
-        }
-
-        Some(hashes)
+                index /= 2;
+                hashes
+            },
+        );
+        Some(proof_hashes)
     }
 
-    pub fn verify<T: std::convert::AsRef<[u8]>>(&self, proof: Vec<HashedData>, check: &T) -> bool {
+    pub fn verify<T: AsRef<[u8]>>(&self, proof: Vec<HashedData>, check: &T) -> bool {
         let check: HashedData = Sha3_256::digest(check).into();
 
-        let mut new_root = check;
-
-        let mut element_index = self
+        let Some(mut element_index) = self
             .leaves
             .get(0)
             .unwrap()
             .iter()
             .position(|og_data| *og_data == check)
-            .unwrap();
+        else {
+            return false;
+        };
 
-        // println!("{}", element_index);
-
-        for part in proof {
-            println!("{}", element_index);
+        let new_root = proof.iter().fold(check, |mut accumulated_hash, proof| {
             if element_index % 2 == 0 {
-                new_root = hash(&[new_root, part]);
+                accumulated_hash = hash(&[accumulated_hash, *proof]);
             } else {
-                new_root = hash(&[part, new_root]);
+                accumulated_hash = hash(&[*proof, accumulated_hash]);
             }
-
             element_index /= 2;
-        }
+            accumulated_hash
+        });
 
-        println!("Root {:?}", self.leaves[self.leaves.len() - 1][0]);
-        println!("New root {:?}", new_root);
+        // This will only print when testing. Useful to check results
+        // in case test fails.
+        if cfg!(test) {
+            println!("Root {:?}", self.leaves[self.leaves.len() - 1][0]);
+            println!("New root {:?}", new_root);
+        }
         new_root == self.leaves[self.leaves.len() - 1][0]
+    }
+
+    pub fn add_element<T: AsRef<[u8]>>(&mut self, new_val: &T) {
+        let mut initial_blocks: Vec<HashedData> = self.leaves[0].clone();
+        let new_value = Sha3_256::digest(new_val).into();
+        initial_blocks.push(new_value);
+        let new_tree = Self::generate_tree(initial_blocks);
+        self.leaves = new_tree;
     }
 }
 
@@ -186,6 +191,30 @@ mod tests {
 
         let is_valid = merkle_tree.verify(proof, &"5");
         println!("{}", is_valid);
+        assert!(is_valid);
+    }
+
+    #[test]
+    fn generate_new_tree() {
+        let mut merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
+        merkle_tree.add_element(&"6");
+
+        let proof_pos: Vec<usize> = merkle_tree
+            .generate_proof(&"6")
+            .unwrap()
+            .iter()
+            .map(|(position, _)| *position)
+            .collect();
+
+        let proof_values: Vec<HashedData> = merkle_tree
+            .generate_proof(&"6")
+            .unwrap()
+            .iter()
+            .map(|(_, values)| *values)
+            .collect();
+
+        assert_eq!(proof_pos, [4, 2, 0]);
+        let is_valid = merkle_tree.verify(proof_values, &"6");
         assert!(is_valid);
     }
 }
