@@ -70,8 +70,7 @@ impl MerkleTree {
             *og_data == check
         })?;
 
-        let first_hash = self.leaves[0][index];
-        let mut hashes: Vec<(Position, HashedData)> = vec![(index, first_hash)];
+        let mut hashes: Vec<(Position, HashedData)> = vec![];
 
         for layer in self.leaves.iter() {
             // Skip root
@@ -94,11 +93,6 @@ impl MerkleTree {
             }
 
             index /= 2;
-        }
-
-        if hashes.len() >= 2 {
-            let first_two = &mut hashes[0..=1];
-            first_two.sort();
         }
 
         Some(hashes)
@@ -204,7 +198,7 @@ mod tests {
             .map(|a| a.0)
             .collect();
 
-        assert_eq!(proof, [4, 4, 2, 0]);
+        assert_eq!(proof, [4, 2, 0]);
     }
 
     #[test]
@@ -218,7 +212,7 @@ mod tests {
             .map(|a| a.0)
             .collect();
 
-        assert_eq!(proof, [4, 5, 3, 0]);
+        assert_eq!(proof, [4, 3, 0]);
     }
 
     #[test]
