@@ -101,13 +101,16 @@ impl MerkleTree {
     pub fn verify<T: std::convert::AsRef<[u8]>>(&self, proof: Vec<HashedData>, check: &T) -> bool {
         let check: HashedData = Sha3_256::digest(check).into();
 
-        let mut element_index = self
+        if let Some(mut element_index) = self
             .leaves
             .get(0)
             .unwrap()
             .iter()
             .position(|og_data| *og_data == check)
-            .unwrap();
+        {
+        } else {
+            false
+        }
 
         let new_root = proof.iter().fold(check, |mut accumulated_hash, proof| {
             if element_index % 2 == 0 {
