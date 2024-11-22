@@ -124,8 +124,10 @@ impl MerkleTree {
             accumulated_hash
         });
 
-        println!("Root {:?}", self.leaves[self.leaves.len() - 1][0]);
-        println!("New root {:?}", new_root);
+        if cfg!(test) {
+            println!("Root {:?}", self.leaves[self.leaves.len() - 1][0]);
+            println!("New root {:?}", new_root);
+        }
         new_root == self.leaves[self.leaves.len() - 1][0]
     }
 
