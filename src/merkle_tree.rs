@@ -115,12 +115,11 @@ impl MerkleTree {
     pub fn verify<T: AsRef<[u8]>>(&self, proof: Vec<HashedData>, check: &T) -> bool {
         let check: HashedData = Sha3_256::digest(check).into();
 
-        let Some(mut element_index) = self
-            .leaves
-            .get(0)
-            .unwrap()
-            .iter()
-            .position(|og_data| *og_data == check)
+        let Some(first_level) = self.leaves.get(0) else {
+            return false;
+        };
+
+        let Some(mut element_index) = first_level.iter().position(|og_data| *og_data == check)
         else {
             return false;
         };
