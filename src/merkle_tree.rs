@@ -114,14 +114,14 @@ impl MerkleTree {
         // println!("{}", element_index);
 
         for part in proof {
-	  println!("{}", element_index);
+            println!("{}", element_index);
             if element_index % 2 == 0 {
                 new_root = hash(&[new_root, part]);
             } else {
                 new_root = hash(&[part, new_root]);
             }
 
-	  element_index /= 2;
+            element_index /= 2;
         }
 
         println!("Root {:?}", self.leaves[self.leaves.len() - 1][0]);
@@ -136,60 +136,19 @@ mod tests {
 
     #[test]
     fn merkel_tree_not_power_2() {
-        //        		   11
-        //        		   /\
-        //        		  /  \
-        //        		 /    \
-        //        	          /      \
-        //        	         /        \
-        //        	        /          \
-        //        	       /	          \
-        //        	      /	           \
-        //        	     /	            \
-        //        	    /	             \
-        //                    9                     10
-        //        	  /\	              /\
-        //                   /  \	             /  \
-        //                  /    \	            /    \
-        //                 /      \	           /      \
-        //                /	       \	          /        \
-        //                6        7            8        8
-        //               /\	        /\          /\
-        //              /  \       /  \        /  \
-        //             /    \     /	 \      /    \
-        //            /	 \   /	  \    /      \
-        //           /	  \ /	   \  /        \
-        //          0         1 2        3 4         5
-
         let merkle_tree = MerkleTree::new(&["0", "1", "2", "3", "4", "5"]);
         assert_eq!(merkle_tree.leaves.len(), 4)
     }
 
     #[test]
     fn merkel_tree_power_2() {
-        //                    6
-        //        	  /\
-        //                   /  \
-        //                  /    \
-        //                 /      \
-        //                /	       \
-        //                4         5
-        //               /\	        /\
-        //              /  \       /  \
-        //             /    \     /	 \
-        //            /	 \   /	  \
-        //           /	  \ /	   \
-        //          0         1 2        3
-
         let merkle_tree = MerkleTree::new(&["0", "1", "2", "3"]);
         assert_eq!(merkle_tree.leaves.len(), 3)
     }
 
     #[test]
     fn generate_proof_not_power_test() {
-        let merkle_tree = MerkleTree::new(&[
-            "1", "2", "3", "4", "5",
-        ]);
+        let merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
 
         let proof: Vec<Position> = merkle_tree
             .generate_proof(&"5")
