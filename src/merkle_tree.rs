@@ -69,13 +69,24 @@ impl MerkleTree {
         MerkleTree { leaves: tree }
     }
 
+    /// This function is a wrapper over
+    /// [`MerkleTree::generate_proof_internal()`] to make calling the
+    /// function more convenvient. This filters out the indexes used
+    /// for debugging.
+    pub fn generate_proof<T: AsRef<[u8]>>(&self, elem: &T) -> Option<Vec<HashedData>> {
+        let proof = self.generate_proof_internal(&elem)?;
+        let proof: Vec<HashedData> = proof.iter().map(|(_, value)| *value).collect();
+
+        Some(proof)
+    }
+
     /// This function generates a proof for a given element of the
     /// MerkleTree. If the element is not present in the MerkleTree it
     /// will return None.  The returned vector will contain both the
     /// Position of the element in its respective level and the actual
     /// hash. The position is returned mainly to make debugging
     /// easier.  It can always be ignored with (_, hash)
-    pub fn generate_proof_internal<T: AsRef<[u8]>>(
+    fn generate_proof_internal<T: AsRef<[u8]>>(
         &self,
         elem: &T,
     ) -> Option<Vec<(usize, HashedData)>> {
