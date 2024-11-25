@@ -56,6 +56,17 @@ impl MerkleTree {
         tree
     }
 
+    pub fn get_root(&self) -> HashedData {
+        self.leaves[self.leaves.len() - 1][0]
+    }
+
+    pub fn get_index<T: AsRef<[u8]>>(&self, elem: &T) -> Option<usize> {
+        let check: HashedData = Sha3_256::digest(elem).into();
+        let first_level = self.leaves.get(0)?;
+        let index = first_level.iter().position(|og_data| *og_data == check);
+        index
+    }
+
     /// This function will create the entire MerkleTree given a slice of
     /// elements that implement the AsRef<[u8]> trait.
     pub fn new<T: AsRef<[u8]>>(data: &[T]) -> MerkleTree {
@@ -126,17 +137,15 @@ impl MerkleTree {
     /// This function receives a proof (generated from the
     /// [`MerkleTree::generate_proof_internal()`] for example. It will return boolean
     /// stating wether the merkle tree contains the value `check`.
-    pub fn verify<T: AsRef<[u8]>>(&self, proof: Vec<HashedData>, check: &T) -> bool {
+    pub fn verify<T: AsRef<[u8]>>(
+        proof: Vec<HashedData>,
+        check: &T,
+        index: usize,
+        root: HashedData,
+    ) -> bool {
         let check: HashedData = Sha3_256::digest(check).into();
 
-        let Some(first_level) = self.leaves.get(0) else {
-            return false;
-        };
-
-        let Some(mut element_index) = first_level.iter().position(|og_data| *og_data == check)
-        else {
-            return false;
-        };
+        let mut element_index = index;
 
         let new_root = proof.iter().fold(check, |mut accumulated_hash, proof| {
             if element_index % 2 == 0 {
@@ -148,13 +157,7 @@ impl MerkleTree {
             accumulated_hash
         });
 
-        // This will only print when testing. Useful to check results
-        // in case test fails.
-        if cfg!(test) {
-            println!("Root {:?}", self.leaves[self.leaves.len() - 1][0]);
-            println!("New root {:?}", new_root);
-        }
-        new_root == self.leaves[self.leaves.len() - 1][0]
+        new_root == root
     }
 
     /// This functions adds an element to the MerkleTree. Said value
@@ -223,8 +226,9 @@ mod tests {
             .map(|(_, value)| *value)
             .collect();
 
-        let is_valid = merkle_tree.verify(proof, &"5");
-        println!("{}", is_valid);
+        let root = merkle_tree.get_root();
+        let index = merkle_tree.get_index(&"5").unwrap();
+        let is_valid = MerkleTree::verify(proof, &"5", index, root);
         assert!(is_valid);
     }
 
@@ -248,7 +252,10 @@ mod tests {
             .collect();
 
         assert_eq!(proof_pos, [4, 2, 0]);
-        let is_valid = merkle_tree.verify(proof_values, &"6");
+        let root = merkle_tree.get_root();
+        let index = merkle_tree.get_index(&"6").unwrap();
+        let is_valid = MerkleTree::verify(proof_values, &"6", index, root);
+
         assert!(is_valid);
     }
 }
