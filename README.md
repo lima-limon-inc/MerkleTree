@@ -49,7 +49,7 @@ fn main() {
 }
 ```
 
-Now you have the proof. This proof allows us to check wether a certain value is present in the tree, without needing to check the entire tree, you only need to compare with the root of the original MerkleTree. This comparisson is done inside the method, like so. 
+Now you have the proof. This proof allows us to check whether a certain value is present in the tree, without needing to check the entire tree, you only need to compare with the root of the original MerkleTree. This comparison is done inside the method, like so. 
 
 ``` rust
 fn main() {
