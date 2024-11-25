@@ -1,7 +1,8 @@
 use sha3::{Digest, Sha3_256};
 
-type HashedData = [u8; 32];
+pub type HashedData = [u8; 32];
 
+/// This function generates the joint hash of two (or more) given hashes
 pub fn hash(leaves: &[HashedData]) -> HashedData {
     let new_hash = leaves
         .iter()
@@ -15,11 +16,20 @@ pub fn hash(leaves: &[HashedData]) -> HashedData {
     new_hash
 }
 
+/// This struct contains the MerkleTree. This is a tree that has n levels
+/// the first level contains the hashes of the original data; whilst
+/// the other levels contains the accumulated hash of the bottom two
+/// levels. If there's an uneven amount of blocks in a level then the
+/// last available block is used to create the upper block
 pub struct MerkleTree {
     leaves: Vec<Vec<HashedData>>,
 }
 
 impl MerkleTree {
+    /// This auxilary function is used to generate MerkleTree's internal
+    /// structure given a vector of hashed blocks. These blocks will
+    /// serve as the foundation of the MerkleTree. These initial blocks
+    /// will remain in the bottom vector.
     fn generate_tree(initial_hashes: Vec<HashedData>) -> Vec<Vec<HashedData>> {
         let mut tree: Vec<Vec<HashedData>> = vec![];
         let mut new_leaves = initial_hashes;
@@ -45,6 +55,9 @@ impl MerkleTree {
 
         tree
     }
+
+    /// This function will create the entire MerkleTree given a slice of
+    /// elements that implement the AsRef<[u8]> trait.
     pub fn new<T: AsRef<[u8]>>(data: &[T]) -> MerkleTree {
         let initial_blocks: Vec<HashedData> = data
             .iter()
@@ -56,9 +69,12 @@ impl MerkleTree {
         MerkleTree { leaves: tree }
     }
 
-    // This function returns the index of the hash mainly to make
-    // debugging easier. Plus, I thinks it's a cool bonus. It can
-    // always be ignored with (_, hash)
+    /// This function generates a proof for a given element of the
+    /// MerkleTree. If the element is not present in the MerkleTree it
+    /// will return None.  The returned vector will contain both the
+    /// Position of the element in its respective level and the actual
+    /// hash. The position is returned mainly to make debugging
+    /// easier.  It can always be ignored with (_, hash)
     pub fn generate_proof<T: AsRef<[u8]>>(&self, elem: &T) -> Option<Vec<(usize, HashedData)>> {
         // It there is no first level, for whatever reason, reaturn None
         let first_level = self.leaves.get(0)?;
@@ -93,15 +109,17 @@ impl MerkleTree {
         Some(proof_hashes)
     }
 
+    /// This function receives a proof (generated from the
+    /// [`MerkleTree::generate_proof()`] for example. It will return boolean
+    /// stating wether the merkle tree contains the value `check`.
     pub fn verify<T: AsRef<[u8]>>(&self, proof: Vec<HashedData>, check: &T) -> bool {
         let check: HashedData = Sha3_256::digest(check).into();
 
-        let Some(mut element_index) = self
-            .leaves
-            .get(0)
-            .unwrap()
-            .iter()
-            .position(|og_data| *og_data == check)
+        let Some(first_level) = self.leaves.get(0) else {
+            return false;
+        };
+
+        let Some(mut element_index) = first_level.iter().position(|og_data| *og_data == check)
         else {
             return false;
         };
@@ -125,6 +143,8 @@ impl MerkleTree {
         new_root == self.leaves[self.leaves.len() - 1][0]
     }
 
+    /// This functions adds an element to the MerkleTree. Said value
+    /// will be added to the bottom layer all the way to the right
     pub fn add_element<T: AsRef<[u8]>>(&mut self, new_val: &T) {
         let mut initial_blocks: Vec<HashedData> = self.leaves[0].clone();
         let new_value = Sha3_256::digest(new_val).into();
