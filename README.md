@@ -5,7 +5,7 @@ Simple [Merkle Tree](https://en.wikipedia.org/wiki/Merkle_tree) implementation i
 
 1. Clone the repo to your machine. (NOTE: This will only clone the latest commit. This is done in order to reduce disk usage).
 ```shell
-git clone --depth=1 git@github.com:lima-limon-inc/MerkleTree.gitMerkleTreeRust/ 
+git clone --depth=1 git@github.com:lima-limon-inc/MerkleTree.gitMerkleTreeRust/
 ```
 
 2. Enter the new directory
@@ -19,7 +19,7 @@ make
 make run
 ```
 ## Usage
-This library can be used with any type that implements the `AsRef<[u8]>` trait. 
+This library can be used with any type that implements the `AsRef<[u8]>` trait.
 
 Fist, you need to create the actual Merkle Tree with a given array of values. These values will serve as the foundations of the Merkle Tree and will remain at the bottom layer.
 
@@ -34,18 +34,8 @@ Once created, one of the main things you can do is generate a proof for a given 
 ``` rust
 fn main() {
         let mut merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
-        
+
         let proof = merkle_tree.generate_proof(&"1");
-}
-```
-
-This proof will also contain the indexes at each level of the generated proof. This information is not necessary for the proof, and is returned mainly for debugging purposes. It's probably best to remove it. That can be done with the following:
-
-``` rust
-fn main() {
-        let mut merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
-        
-        let proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
 }
 ```
 
@@ -54,9 +44,9 @@ Now you have the proof. This proof allows us to check whether a certain value is
 ``` rust
 fn main() {
         let mut merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
-        
-        let proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
-        
+
+        let proof = merkle_tree.generate_proof(&"1");
+
         let exists = merkle_tree.verify(proof, &"1");
         println!("{}", exists);
 }
@@ -70,14 +60,14 @@ Furthermore, you can extend the tree to your heart's content. This will modify t
 ``` rust
 fn main() {
         let mut merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
-        
-        let proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
-        
+
+        let proof = merkle_tree.generate_proof(&"1");
+
         merkle_tree.add_element(&"6");
         // After this addition, the proof becomes invalid. But new ones can be generated
 
-        let new_proof = merkle_tree.generate_proof(&"1").unwrap().iter().map(|(_, value)| *value).collect();
-        
+        let new_proof = merkle_tree.generate_proof(&"1");
+
         let exists = merkle_tree.verify(new_proof, &"1");
         println!("{}", exists);
 }

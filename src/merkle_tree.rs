@@ -56,6 +56,10 @@ impl MerkleTree {
         tree
     }
 
+    pub fn get_root(&self) -> HashedData {
+        self.leaves[self.leaves.len() - 1][0]
+    }
+
     /// This function will create the entire MerkleTree given a slice of
     /// elements that implement the AsRef<[u8]> trait.
     pub fn new<T: AsRef<[u8]>>(data: &[T]) -> MerkleTree {
@@ -69,13 +73,27 @@ impl MerkleTree {
         MerkleTree { leaves: tree }
     }
 
+    /// This function is a wrapper over
+    /// [`MerkleTree::generate_proof_internal()`] to make calling the
+    /// function more convenvient. This filters out the indexes used
+    /// for debugging.
+    pub fn generate_proof<T: AsRef<[u8]>>(&self, elem: &T) -> Option<(usize, Vec<HashedData>)> {
+        let (index, proof) = self.generate_proof_internal(&elem)?;
+        let proof: Vec<HashedData> = proof.iter().map(|(_, value)| *value).collect();
+
+        Some((index, proof))
+    }
+
     /// This function generates a proof for a given element of the
     /// MerkleTree. If the element is not present in the MerkleTree it
     /// will return None.  The returned vector will contain both the
     /// Position of the element in its respective level and the actual
     /// hash. The position is returned mainly to make debugging
     /// easier.  It can always be ignored with (_, hash)
-    pub fn generate_proof<T: AsRef<[u8]>>(&self, elem: &T) -> Option<Vec<(usize, HashedData)>> {
+    fn generate_proof_internal<T: AsRef<[u8]>>(
+        &self,
+        elem: &T,
+    ) -> Option<(usize, Vec<(usize, HashedData)>)> {
         // It there is no first level, for whatever reason, reaturn None
         let first_level = self.leaves.get(0)?;
 
@@ -85,6 +103,8 @@ impl MerkleTree {
             let check: HashedData = Sha3_256::digest(elem).into();
             *og_data == check
         })?;
+
+        let og_index = index;
 
         // Remove the root layer.
         let proof_hashes = self.leaves.iter().filter(|layer| layer.len() > 1).fold(
@@ -106,23 +126,21 @@ impl MerkleTree {
                 hashes
             },
         );
-        Some(proof_hashes)
+        Some((og_index, proof_hashes))
     }
 
     /// This function receives a proof (generated from the
-    /// [`MerkleTree::generate_proof()`] for example. It will return boolean
+    /// [`MerkleTree::generate_proof_internal()`] for example. It will return boolean
     /// stating wether the merkle tree contains the value `check`.
-    pub fn verify<T: AsRef<[u8]>>(&self, proof: Vec<HashedData>, check: &T) -> bool {
+    pub fn verify<T: AsRef<[u8]>>(
+        proof: Vec<HashedData>,
+        check: &T,
+        index: usize,
+        root: HashedData,
+    ) -> bool {
         let check: HashedData = Sha3_256::digest(check).into();
 
-        let Some(first_level) = self.leaves.get(0) else {
-            return false;
-        };
-
-        let Some(mut element_index) = first_level.iter().position(|og_data| *og_data == check)
-        else {
-            return false;
-        };
+        let mut element_index = index;
 
         let new_root = proof.iter().fold(check, |mut accumulated_hash, proof| {
             if element_index % 2 == 0 {
@@ -134,13 +152,7 @@ impl MerkleTree {
             accumulated_hash
         });
 
-        // This will only print when testing. Useful to check results
-        // in case test fails.
-        if cfg!(test) {
-            println!("Root {:?}", self.leaves[self.leaves.len() - 1][0]);
-            println!("New root {:?}", new_root);
-        }
-        new_root == self.leaves[self.leaves.len() - 1][0]
+        new_root == root
     }
 
     /// This functions adds an element to the MerkleTree. Said value
@@ -171,29 +183,21 @@ mod tests {
     }
 
     #[test]
-    fn generate_proof_not_power_test() {
+    fn generate_proof_internal_not_power_test() {
         let merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
 
-        let proof: Vec<usize> = merkle_tree
-            .generate_proof(&"5")
-            .unwrap()
-            .iter()
-            .map(|a| a.0)
-            .collect();
+        let (index, proof) = merkle_tree.generate_proof_internal(&"5").unwrap();
+        let proof: Vec<usize> = proof.iter().map(|a| a.0).collect();
 
         assert_eq!(proof, [4, 2, 0]);
     }
 
     #[test]
-    fn generate_proof_power_test() {
+    fn generate_proof_internal_power_test() {
         let merkle_tree = MerkleTree::new(&["0", "1", "2", "3", "4", "5", "6", "7"]);
 
-        let proof: Vec<usize> = merkle_tree
-            .generate_proof(&"5")
-            .unwrap()
-            .iter()
-            .map(|a| a.0)
-            .collect();
+        let (index, proof) = merkle_tree.generate_proof_internal(&"5").unwrap();
+        let proof: Vec<usize> = proof.iter().map(|a| a.0).collect();
 
         assert_eq!(proof, [4, 3, 0]);
     }
@@ -202,15 +206,11 @@ mod tests {
     fn verify_test() {
         let merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
 
-        let proof: Vec<HashedData> = merkle_tree
-            .generate_proof(&"5")
-            .unwrap()
-            .iter()
-            .map(|(_, value)| *value)
-            .collect();
+        let (index, proof) = merkle_tree.generate_proof_internal(&"5").unwrap();
+        let proof = proof.iter().map(|(_, value)| *value).collect();
 
-        let is_valid = merkle_tree.verify(proof, &"5");
-        println!("{}", is_valid);
+        let root = merkle_tree.get_root();
+        let is_valid = MerkleTree::verify(proof, &"5", index, root);
         assert!(is_valid);
     }
 
@@ -219,22 +219,16 @@ mod tests {
         let mut merkle_tree = MerkleTree::new(&["1", "2", "3", "4", "5"]);
         merkle_tree.add_element(&"6");
 
-        let proof_pos: Vec<usize> = merkle_tree
-            .generate_proof(&"6")
-            .unwrap()
-            .iter()
-            .map(|(position, _)| *position)
-            .collect();
+        let (index, proof_pos) = merkle_tree.generate_proof_internal(&"6").unwrap();
+        let proof_pos: Vec<usize> = proof_pos.iter().map(|(position, _)| *position).collect();
 
-        let proof_values: Vec<HashedData> = merkle_tree
-            .generate_proof(&"6")
-            .unwrap()
-            .iter()
-            .map(|(_, values)| *values)
-            .collect();
+        let (index, proof_values) = merkle_tree.generate_proof_internal(&"6").unwrap();
+        let proof_values = proof_values.iter().map(|(_, values)| *values).collect();
 
         assert_eq!(proof_pos, [4, 2, 0]);
-        let is_valid = merkle_tree.verify(proof_values, &"6");
+        let root = merkle_tree.get_root();
+        let is_valid = MerkleTree::verify(proof_values, &"6", index, root);
+
         assert!(is_valid);
     }
 }
